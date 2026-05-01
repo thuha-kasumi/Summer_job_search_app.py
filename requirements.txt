@@ -1,0 +1,5 @@
+streamlit
+pandas
+python-jobspy
+st-gsheets-connection
+openpyxl
