@@ -10,16 +10,15 @@ from streamlit_gsheets import GSheetsConnection
 # --- RELEVANCE CLASSIFICATION LOGIC ---
 def classify_relevance(title, desc):
     """
-    Categorizes jobs by bridging your 13+ years of marketing experience 
-    with your new MSBA analytical skill set.
+    Categorizes jobs by bridging marketing experience with MSBA analytical skill set.
     """
     t_d = (str(title) + " " + str(desc)).lower()
     
     # Data signals from MSBA (BAN 601, 612, 674)
     data_sig = any(k in t_d for k in ["data", "analyst", "python", "sql", "analytics", "statistics", "machine learning", "tableau"])
     
-    # Strategy signals from 13+ years of Marketing/Branding
-    strat_sig = any(k in t_d for k in ["strategy", "branding", "product strategy", "growth", "insights", "gtm", "positioning"])
+    # Strategy signals from Marketing/Branding
+    strat_sig = any(k in t_d for k in ["strategy", "branding", "product strategy", "growth", "insights", "gtm", "positioning", "go-to-market", "cross-border"])
     
     if data_sig and strat_sig: 
         return "High Relevance (Data + Strategy)"
@@ -139,5 +138,5 @@ if "clean_jobs_df" in st.session_state and st.session_state["clean_jobs_df"] is 
     st.dataframe(df[["job_title", "company", "relevance_label", "job_url"]], use_container_width=True)
     
     if st.button("SAVE TO GOOGLE SHEETS"):
-        # Logic to append to GSheets goes here (same as your original append_unique_rows function)
+        # Logic to append to GSheets goes here (same as the original append_unique_rows function)
         st.success("Results synced to Master Sheet.")
