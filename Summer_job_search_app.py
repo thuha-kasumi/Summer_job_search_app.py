@@ -27,33 +27,80 @@ DEFAULT_SITE_OPTIONS = ["linkedin", "indeed", "glassdoor", "google", "zip_recrui
 # RELEVANCE LOGIC
 # =========================================================
 def classify_relevance(title, desc):
-    text = (str(title) + " " + str(desc)).lower()
+    title_text = str(title).lower()
+    desc_text = str(desc).lower()
+    text = f"{title_text} {desc_text}"
+
+    marketing_strategy_keywords = [
+        "marketing strategy", "brand strategy", "brand management", "brand manager",
+        "product strategy", "product marketing", "go-to-market", "gtm",
+        "growth strategy", "growth marketing", "commercial strategy",
+        "portfolio strategy", "category strategy", "customer strategy",
+        "market strategy", "strategic marketing", "positioning", "brand positioning",
+        "consumer marketing", "campaign strategy", "marketing planning"
+    ]
 
     analytics_keywords = [
-        "data", "analyst", "analytics", "business intelligence", "sql",
-        "python", "statistics", "machine learning", "dashboard", "insights",
-        "forecasting", "experimentation", "a/b test", "measurement", "reporting"
+        "analytics", "business analytics", "marketing analytics", "data analytics",
+        "business intelligence", "consumer insights", "customer insights",
+        "market research", "insights", "performance marketing", "measurement",
+        "forecasting", "reporting", "dashboard", "sql", "python",
+        "data visualization", "experimentation", "a/b test", "segmentation",
+        "attribution", "kpi", "roi", "pricing analytics"
     ]
 
-    strategy_keywords = [
-        "strategy", "strategic", "branding", "brand", "product strategy",
-        "product marketing", "growth", "go-to-market", "gtm", "positioning",
-        "market research", "customer insights", "business strategy",
-        "corporate strategy", "transformation", "portfolio strategy",
-        "commercial strategy", "marketing strategy"
+    business_strategy_keywords = [
+        "business strategy", "corporate strategy", "strategic planning",
+        "business planning", "transformation", "innovation strategy",
+        "commercial excellence", "business insights", "market expansion",
+        "portfolio management", "new product development", "product launch",
+        "customer experience strategy", "revenue growth", "profitability"
     ]
 
+    support_keywords = [
+        "cross-functional", "stakeholder", "commercialization", "launch",
+        "campaign", "integrated marketing", "consumer", "budget", "profit",
+        "p&l", "multicultural", "regional", "apac", "asean", "project management"
+    ]
+
+    negative_keywords = [
+        "sales representative", "insurance agent", "retail sales", "beauty advisor",
+        "customer service", "cashier", "medical sales", "telemarketer",
+        "call center", "field sales", "door to door", "real estate agent",
+        "promoter", "brand ambassador"
+    ]
+
+    title_bonus_keywords = [
+        "strategy manager", "brand manager", "product strategy", "product marketing",
+        "marketing analytics", "consumer insights", "growth strategy",
+        "business insights", "commercial strategy", "market intelligence",
+        "marketing manager", "product manager", "brand lead", "strategic planning"
+    ]
+
+    strategy_hits = sum(k in text for k in marketing_strategy_keywords)
     analytics_hits = sum(k in text for k in analytics_keywords)
-    strategy_hits = sum(k in text for k in strategy_keywords)
+    business_hits = sum(k in text for k in business_strategy_keywords)
+    support_hits = sum(k in text for k in support_keywords)
+    negative_hits = sum(k in text for k in negative_keywords)
+    title_bonus = sum(k in title_text for k in title_bonus_keywords)
 
-    score = analytics_hits + strategy_hits
+    score = (
+        strategy_hits * 3 +
+        analytics_hits * 3 +
+        business_hits * 2 +
+        support_hits * 1 +
+        title_bonus * 2 -
+        negative_hits * 4
+    )
 
-    if analytics_hits >= 1 and strategy_hits >= 1:
-        return "High Relevance (Data + Strategy)", score
-    if strategy_hits >= 1:
-        return "Strategy Focus", score
-    if analytics_hits >= 1:
-        return "Analytics Focus", score
+    if strategy_hits >= 1 and analytics_hits >= 1:
+        return "High Relevance (Marketing/Strategy + Analytics)", score
+    if strategy_hits >= 2 or (strategy_hits >= 1 and business_hits >= 1):
+        return "High Relevance (Strategy / Brand / Product)", score
+    if analytics_hits >= 2:
+        return "Strong Relevance (Analytics / Insights)", score
+    if strategy_hits >= 1 or analytics_hits >= 1 or business_hits >= 1:
+        return "Moderate Relevance", score
     return "Low Relevance", score
 
 
@@ -630,7 +677,7 @@ with st.sidebar:
 
     target_roles = st.text_input(
         "Target roles *",
-        placeholder="e.g. product strategy, brand strategy, marketing analytics, business insights, growth strategy"
+        placeholder="e.g. brand strategy, product marketing, consumer insights, marketing analytics, growth strategy, commercial strategy"
     )
 
     skills_input = st.text_input(
@@ -754,18 +801,20 @@ if run_search:
         axis=1
     )
 
-    high_rel_count = len(raw_jobs[raw_jobs["relevance_label"] == "High Relevance (Data + Strategy)"])
-    strat_count = len(raw_jobs[raw_jobs["relevance_label"] == "Strategy Focus"])
-    analytics_count = len(raw_jobs[raw_jobs["relevance_label"] == "Analytics Focus"])
+    high_combo_count = len(raw_jobs[raw_jobs["relevance_label"] == "High Relevance (Marketing/Strategy + Analytics)"])
+    high_strategy_count = len(raw_jobs[raw_jobs["relevance_label"] == "High Relevance (Strategy / Brand / Product)"])
+    strong_analytics_count = len(raw_jobs[raw_jobs["relevance_label"] == "Strong Relevance (Analytics / Insights)"])
+    moderate_count = len(raw_jobs[raw_jobs["relevance_label"] == "Moderate Relevance"])
     low_count = len(raw_jobs[raw_jobs["relevance_label"] == "Low Relevance"])
 
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("High Relevance", high_rel_count)
-    col2.metric("Strategy Focus", strat_count)
-    col3.metric("Analytics Focus", analytics_count)
-    col4.metric("Low Relevance", low_count)
+    col1, col2, col3, col4, col5 = st.columns(5)
+    col1.metric("High Relevance Combo", high_combo_count)
+    col2.metric("High Strategy", high_strategy_count)
+    col3.metric("Strong Analytics", strong_analytics_count)
+    col4.metric("Moderate", moderate_count)
+    col5.metric("Low", low_count)
 
-    if high_rel_count < 5:
+    if (high_combo_count + high_strategy_count) < 5:
         st.warning("Low high-relevance matches. Try refining target roles, Google query, location, or skills.")
     else:
         st.success("Good number of relevant matches found.")
@@ -790,6 +839,11 @@ if run_search:
     )
 
     clean_jobs["already_in_master"] = clean_jobs["job_uid"].astype(str).isin(existing_keys).astype(int)
+    clean_jobs = clean_jobs.sort_values(
+        by=["relevance_score", "salary_annual_max"],
+        ascending=[False, False],
+        na_position="last"
+    )
 
     st.session_state["raw_jobs_df"] = raw_jobs.copy()
     st.session_state["clean_jobs_df"] = clean_jobs.copy()
@@ -830,13 +884,20 @@ if st.session_state["clean_jobs_df"] is not None:
     c5.metric("Missing salary", missing_salary)
 
     st.subheader("Preview cleaned records")
+
+    preview_df = clean_jobs.sort_values(
+        by=["relevance_score", "salary_annual_max"],
+        ascending=[False, False],
+        na_position="last"
+    )
+
     st.dataframe(
-        clean_jobs[[
+        preview_df[[
             "job_title", "company", "city", "state", "remote_status_clean",
             "salary_annual_min", "salary_annual_max", "salary_source",
             "experience_level_clean", "relevance_label", "relevance_score",
-            "python_required", "sql_required", "analytics_required",
-            "strategy_required", "already_in_master"
+            "analytics_required", "strategy_required", "communication_required",
+            "project_management_required", "already_in_master"
         ]],
         use_container_width=True
     )
